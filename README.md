@@ -23,6 +23,6 @@ This repository is organized as follows:
 
 ### Running Basic Attacks
 
-### Implementing FDPTM
+### Defense Via Differential Privacy
 
 **Note:** This repository is intended for educational and research purposes only. The code and resources should be used responsibly and ethically, with respect for privacy considerations.
