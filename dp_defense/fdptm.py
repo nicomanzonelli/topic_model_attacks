@@ -1,8 +1,13 @@
-from .lda import LDA
-from .dpsu_gw import run_gw
+from lda import LDA
+from dpsu_gw import run_gw
+
 from sklearn.feature_extraction.text import CountVectorizer
 import numpy as np
 from tqdm import tqdm
+
+"""
+Helper functions for FDPTM
+"""
 
 def read_json(in_path):
     with open(in_path, 'r') as f:
@@ -119,6 +124,10 @@ def top_n_words(phi, topic, n, vocabulary):
         top_n_words[vocabulary[idx]] = phi[topic,:][idx]
         
     return top_n_words
+
+"""
+Main FDPTM Function
+"""
 
 def run_fdptm(corpus, dpsu_func, dpsu_func_params, dp_train_func, dp_train_params):
     """

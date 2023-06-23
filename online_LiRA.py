@@ -1,15 +1,17 @@
 """
-This file provides the base class and functions for the online LiRA
+This file provides the base class and functions for the online LiRA. 
+It also provides simple a way to run the offline LiRA.
 """
 import sys
 import numpy as np
 from scipy.stats import norm
 import matplotlib.pyplot as plt
-from .utils import get_doc_word_idx
-
 # To handle errors on ratio
 import warnings
 warnings.filterwarnings("error")
+
+
+from utils import get_doc_word_idx
 
 class LiRA_online:
     

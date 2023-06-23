@@ -3,7 +3,8 @@ This file provides the base class and functions for the offline LiRA
 """
 import numpy as np
 from scipy.stats import norm
-from .utils import get_doc_word_idx
+
+from utils import get_doc_word_idx
 
 class LiRA_offline:
     

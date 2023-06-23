@@ -7,8 +7,7 @@ import numpy as np
 from scipy.stats import entropy
 from tqdm import tqdm
 
-from .utils import get_doc_word_idx, sample_documents
-from .appendixA import est_doc_topic_dist, calc_entropy
+from utils import get_doc_word_idx, sample_documents, est_doc_topic_dist, calc_entropy
 
 """
 Functions to carry out the attack against topic models
@@ -88,23 +87,22 @@ def basic_attack(X, p_train, attack_training_function, attack_model_params):
     return out
 
 if __name__ == "__main__":
+    ###TESTING
     from utils import read_json, write_pickle, create_doc_term_mat, train_model_sklearn
 
     # Read in dataset
     data = read_json('./data/pheme_clean.json')
     
     X, _ = create_doc_term_mat(data['text'])
-    #print(f"The shape of the document term matrix is {X.shape}")
 
     #kwargs for basic simulation
     kwargs = {"X": X, "p_train": .5,
               "attack_training_function": train_model_sklearn,
               "attack_model_params": {"k":5}
              }
-
-    for it in range(10):
-        sim_out = basic_attack(**kwargs)
-        path = f'./tweet_evals/basic/basic_{it}.pickle'
-        sim_out['path'] = path
-        write_pickle(sim_out, path)
+    
+    sim_out = basic_attack(**kwargs)
+    path = f'./pheme_basic_test.pickle'
+    sim_out['path'] = path
+    write_pickle(sim_out, path)
         

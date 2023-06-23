@@ -1,10 +1,10 @@
-from .attack_simulations import simple_exp, synth_exp
-from .utils import read_json, write_pickle, create_doc_term_mat
+from attack_simulations import LiRA_exp
+from utils import read_json, write_pickle, create_doc_term_mat
 
 import json
 import pickle
 
-def run_simple_exp(in_path, out_path, sim_args):
+def run_LiRA_exp(in_path, out_path, sim_args):
     """
     
     """
@@ -17,7 +17,7 @@ def run_simple_exp(in_path, out_path, sim_args):
     sim_args['X'] = X
     
     # Run simple sim
-    sim_out = simple_exp(**sim_args)
+    sim_out = LiRA_exp(**sim_args)
     
     # Clean up output
     sim_args['data_path'] = in_path
@@ -38,7 +38,7 @@ if __name__ == "__main__":
     from utils import train_model_sklearn, calc_max_logll
 
     sim_args = {"train_sample_p": 0.5, 
-        "N": 256, 
+        "N": 128, 
         "attack_training_function": train_model_sklearn, 
         "attack_params": {"k": 5},
         "shadow_training_function": train_model_sklearn, 
@@ -47,8 +47,8 @@ if __name__ == "__main__":
         "verbose": True}
 
     in_path = './data/pheme_clean.json'
-    out_path = f'./evals/tweet_128sm_{it}.pickle'
-    sim_out = run_simple_exp(in_path, out_path, sim_args)
+    out_path = f'./pheme_test.pickle'
+    sim_out = run_LiRA_exp(in_path, out_path, sim_args)
     
     
     

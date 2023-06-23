@@ -1,21 +1,23 @@
 """
-Functions to execute attack simulations on a dataset
+This module provides the functions for executing LiRA attack simulations on topic models
 """
-from .offline_LiRA import LiRA_offline
-from .online_LiRA import LiRA_online
+from offline_LiRA import LiRA_offline
+from online_LiRA import LiRA_online
+from utils import sample_documents
+
+
 from tqdm import tqdm
 import numpy as np
-from .utils import sample_documents, create_mock_dataset
 
 """
-Functions for setting up attack simulations
+Functions that set up the LiRA attack
 """
 
 def split_and_bin(X, N):
     """
     Input:
         - X (array): The document-term matrix with shape (# of Docs, Length of Vocab).
-        - n_splits (int): The number of times to randomly split the data into two subsets.
+        - N (int): The number of times to randomly split the data into two subsets.
     Outputs:
         - splits (list of 2D-arrays): list of subset of X with half the observations.
         - target_in_splits (list of array): list of document indicies in each split.
@@ -36,6 +38,7 @@ def split_and_bin(X, N):
         
 def train_shadow_models(X, N, train_func, train_args, verbose = True):
     """
+    Function that trains N shadow topic models.
     
     """
     d = {'doc_idx': [], 'in_phis': [], 'out_phis': []}
@@ -66,10 +69,10 @@ def train_shadow_models(X, N, train_func, train_args, verbose = True):
     return d
 
 """
-Functions that run attack simulations
+Functions that run LiRA attack simulations
 """
 
-def simple_exp(X, train_sample_p, N, 
+def LiRA_exp(X, train_sample_p, N, 
                   attack_training_function, attack_params,
                   shadow_training_function, shadow_params, stat_func,
                   verbose = True):
@@ -77,8 +80,8 @@ def simple_exp(X, train_sample_p, N,
     A funcion to run the basic experiment.
     Inputs:
         - X (np.array): document-term count matrix of a data set
-        - N (int): The total number of shadow models to train. Equavalent to N/2
-            in the online test, and N in the offline test.
+        - N (int): Parameter to control number of shadow models to train.
+            For the online test $N$ is the total number of shadow models trained.
         - train_sample_p (float): percentage of X to sample for training data
         - attack_training_function (funcion): python function defined to take a 
             dataset 'X' and other parameters and returns topic-word dist as array.
@@ -131,56 +134,6 @@ def simple_exp(X, train_sample_p, N,
                "online_scores": score_on,
                "score_off": score_off,
                "stats_in": stat_in,
-               "stats_out": stat_out,
-               "stat_obs": stat_obs
-              }
-    
-    return sim_out
-
-def simple_offline_exp(X, X_aux, train_sample_p,aux_sample_p, N,
-                  attack_training_function, attack_params,
-                  shadow_training_function, shadow_params, stat_func,
-                  verbose = True):
-    """
-    A funcion to run the basic experiment.
-    Inputs:
-        -
-    Outputs:
-        -
-    """
-    # Choose attack model training data
-    X_train, train_docs_idx = sample_documents(X, .5)
-    attack_params['X'] = X_train
-
-    # Train Attack Model
-    attack_phi = attack_training_function(**attack_params)
-    
-    # Truth vector of doc idx in training data (0)
-    target_truth = 1*np.in1d(np.arange(X.shape[0]), train_docs_idx)
-    
-    # Use the auxilary set to train N shadow models (THE AUXILARY SET CANNOT CONTAIN ANY OF X)
-    shadow_phis = []
-    print("Training Shadow Models...") if verbose else None
-    for _ in tqdm(range(N), disable = (not verbose)):
-        X_shadow, _ = sample_documents(X_aux, aux_sample_p)
-        shadow_params['X'] = X_shadow
-        shadow_phis.append(shadow_training_function(**shadow_params))
-    
-    # Conduct the offline test
-    print("Running offline test...") if verbose else None
-    score_off = []
-    stat_out = []
-    stat_obs = []
-    for doc_idx in tqdm(range(X.shape[0]), disable = (not verbose)):
-        lira = LiRA_offline(attack_phi, shadow_phis, X[doc_idx])
-        score_off.append(lira.fit(stat_func))
-        stat_out.append(lira.out_stats)
-        stat_obs.append(lira.obs_stats)
-
-        
-    sim_out = {"attack_phi": attack_phi,
-              "target_truth": target_truth,
-               "offline_scores": score_off,
                "stats_out": stat_out,
                "stat_obs": stat_obs
               }
