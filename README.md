@@ -22,13 +22,13 @@ This repository is organized as follows:
 
 ### Running Attack Simulations
 
-After installing all required packages in requirements.txt, you can run a basic online LiRA against topic models by simply running the following code.
+After ensuring that all of the required packages in requirements.txt are installed, you can run a basic online LiRA against topic models by running the following code.
 
 ```
 python api.py
 ```
 
-Within the api.py file, we specify the input data path, output file path (pheme_test.pickle), and the attack simulation parameters. The simulation parameters for this simple attack simulation are set to train $N=64$ (effectivley 128 Shadow Models) on the $NIPS$ data set. This API provides the basic functionality for running the online LiRA against each dataset.
+Within the api.py file, we specify the input data path, output file path (pheme_test.pickle), and the attack simulation parameters. The simulation parameters for this simple attack simulation are set to train $N=64$ on the $NIPS$ data set. This API provides the basic functionality for running the online LiRA against each dataset.
 
 On a [M2 MacBook Air with 8GB RAM](https://www.apple.com/shop/buy-mac/macbook-air/13-inch-m2) this simulation ~35 minutes to run. Although not provided, simple scripts provide parrellization over a myrad of different experements and simulation iterations.
 
