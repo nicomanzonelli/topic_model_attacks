@@ -30,7 +30,7 @@ python api.py
 
 Within the api.py file, we specify the input data path, output file path (pheme_test.pickle), and the attack simulation parameters. The simulation parameters for this simple attack simulation are set to train $N=64$ on the $NIPS$ data set. This API provides the basic functionality for running the online LiRA against each dataset.
 
-On a [M2 MacBook Air with 8GB RAM](https://www.apple.com/shop/buy-mac/macbook-air/13-inch-m2) this simulation ~35 minutes to run. Although not provided, simple scripts provide parrellization over a myrad of different experements and simulation iterations.
+On a [M2 MacBook Air with 8GB RAM](https://www.apple.com/shop/buy-mac/macbook-air/13-inch-m2) this simulation ~25 minutes to run. Although not provided, simple scripts provide parrellization over a myrad of different experements and simulation iterations.
 
 To run [Huang et al's (2022)](https://jcst.ict.ac.cn/EN/10.1007/s11390-022-2425-x) simple attack run the following code.
 
