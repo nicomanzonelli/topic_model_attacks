@@ -30,7 +30,7 @@ python api.py
 
 Within the api.py file, we specify the input data path, output file path (pheme_test.pickle), and the attack simulation parameters. The simulation parameters for this simple attack train $N=64$ shadow models on the $TweetRumors$ data set. This API provides the basic functionality for running the LiRA.
 
-On a [M2 MacBook Air with 8GB RAM](https://www.apple.com/shop/buy-mac/macbook-air/13-inch-m2) this simulation ~25 minutes to run. Although not provided, simple scripts can provide parrellization over different experements or simulation iterations.
+On a M2 MacBook Air with 8GB RAM this simulation ~25 minutes to run. Although not provided, simple scripts can provide parrellization over different experements or simulation iterations.
 
 To run [Huang et al's (2022)](https://jcst.ict.ac.cn/EN/10.1007/s11390-022-2425-x) simple attack execute the following code.
 
