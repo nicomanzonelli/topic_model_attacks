@@ -3,7 +3,7 @@
 """
 import numpy as np
 from sklearn.decomposition import LatentDirichletAllocation
-from dp_defense.lda import LDA
+from defense.lda import LDA
 
 def train_lda_sklearn(X, k, doc_topic_prior = None, topic_word_prior = None):
     """
