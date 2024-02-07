@@ -14,6 +14,7 @@ import numpy as np
 from scipy.stats import norm, multivariate_normal, entropy
 
 from data.utils import extract_features, encode_doc
+from model_stats import get_topic_dist
 
 class TopicLiRA:
     """
