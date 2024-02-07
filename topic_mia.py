@@ -13,7 +13,7 @@ from typing import List, Callable, Tuple
 import numpy as np
 from scipy.stats import norm, multivariate_normal
 
-from data_utils import extract_features, encode_doc
+from data.utils import extract_features, encode_doc
 
 class TopicLiRA:
     """
@@ -31,10 +31,11 @@ class TopicLiRA:
             - offline_only (bool): Boolean indicator to run only the offline test.
 
         Other class attribute include:
-            - self.in_stats (ndarray):
-            - self.out_stats (ndarray):
-            - self.obs_stats (ndarray):
-            - self.scores (Tuple(list, list)):
+            - self.in_stats (ndarray): Query statistcs for each document on the '
+                    shadow models learned with said document.
+            - self.out_stats (ndarray): Same as in_stats, but for learned without!
+            - self.obs_stats (ndarray): Query statistcs calculated on the target model.
+            - self.scores (Tuple(list, list)): Offline and Online MIA scores.
         """
         self.target_phi = target_phi
         self.target_vocabulary = target_vocabulary
@@ -96,6 +97,11 @@ class TopicLiRA:
                 |   containing the query statistics for each document.
                 └ offline_scores.npy - array shaped (len(obs),) with offline MIA scores
                 └ online_scores.npy - array shaped (len(obs),) with online MIA scores
+
+        Returns:
+            - self.scores (Tuple(list, list)): A tuple of the MIA scores. The 
+                self.scores[0] is the list of offline scores, and self.scores[1]
+                is the list of online scores.
         """
         if out_path:
             os.makedirs(out_path, exist_ok=True)
@@ -131,10 +137,13 @@ class TopicLiRA:
                         shadow_phis: np.ndarray, 
                         docs_in_shadow: List[np.ndarray], 
                         stat_funcs: List,
-                        enable_mp: bool) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+                        enable_mp: bool) -> None:
         """
         Function that gets the statistics for each target document and each shadow
         model.
+
+        This method returns None, but sets the class attributes self.in_stats,
+        self.out_stats, and self.obs_stats.
         """
 
         map_kwargs = {'shadow_phis': shadow_phis, 'docs_in_shadow': docs_in_shadow,
@@ -156,7 +165,17 @@ class TopicLiRA:
 
     def _score_online(self, each_stat):
         """
-        
+        This method calculates the online MIA scores for all documents.
+
+        If the user specifies each stat, it calculates the scores for each 
+        statistic provided. If the user does not, it combines all provided stat.
+        functions using a multivariate norm.
+
+        Returns:
+            - scores (list): List of online MIA scores. If each stat then
+            this method returns list of length number of statistic functions + 1
+            where scores[0] is the mvnorm scores and scores[1:len(stat_functions)-1]
+            is the univariate normal scores for each function.
         """
         scores = self._online_mvnorm_score()
 
@@ -167,7 +186,10 @@ class TopicLiRA:
 
     def _online_mvnorm_score(self):
         """
-        
+        Class method that caluclates the mvnorm online MIA score for each document.
+
+        Returns:
+            - scores (list): List of online MIA scores.
         """
         scores = []
 
@@ -187,7 +209,11 @@ class TopicLiRA:
 
     def _online_score_each(self):
         """
+        Class method that calculates univariate norm online MIA score for each document.
 
+        Returns:
+            - scores (list(list)): List of online MIA scores for each stat in 
+                statatistc_functions.
         """
         scores = []
         for si in range(self.obs_stats.shape[2]):
@@ -210,7 +236,7 @@ class TopicLiRA:
 
     def _score_offline(self, each_stat):
         """
-        
+        Method that operates the same as _score_online, but for offline MIAs
         """
         scores = self._offline_mvnorm_score()
 
@@ -221,7 +247,7 @@ class TopicLiRA:
     
     def _offline_mvnorm_score(self):
         """
-        
+        Method that operates the same as _online_mvnorm_score but for offline
         """
         scores = []
 
@@ -236,7 +262,7 @@ class TopicLiRA:
 
     def _offline_score_each(self):
         """
-        
+        Method the same as _online_score_each but for offline.
         """
         scores = []
         for si in range(self.obs_stats.shape[2]):
@@ -251,6 +277,17 @@ class TopicLiRA:
             scores.append(stat_scores)
 
         return scores
+    
+class SimpleMIA:
+    """
+    The base class that executes the attacks from Huang et al. "Improving parameter 
+    estimation and defensive ability of latent dirichlet allocation model training 
+    under rényi differential privacy" (2022).
+    """
+    def __init__():
+        """
+        The base clas
+        """
     
 # Helper Functions
 

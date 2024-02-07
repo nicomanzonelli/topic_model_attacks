@@ -15,7 +15,7 @@ import functools
 import numpy as np
 
 # import custom modules
-from data_utils import load_data_json, split_data, extract_features
+from data.utils import load_data_json, split_data, extract_features
 from topic_mia import TopicLiRA
 
 def train_target_model(data_path, target_model_path, p, train_func, train_kwargs):
