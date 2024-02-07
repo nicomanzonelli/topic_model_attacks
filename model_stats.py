@@ -126,3 +126,52 @@ def simple_log_sum(phi, doc_encoded):
     a giant log sum of all word probabilities for all topics for the document.
     """
     return np.log(phi[:, doc_encoded]).sum()
+
+# TO-DO: Debug!
+def get_topic_dist(phi, doc_encoded, w_samples=100, tol=1e-6, max_iter=10):
+    """
+    Estimate the document topic distribution through Gibbs sampling.
+    Not a full implementation of folding-in, because we start with random topic assignments
+    for each word. Uses assumption of LDA.
+    Inputs:
+        phi (np.array): the topic-word distribution associated with a TM.
+        doc_word_idx (np.array): document represented as array of indices.
+        tol (float): tolerance for convergence. 
+            Function terminates if changes for each topic p are less than tol
+        max_iter (int): maximum number of iterations through the document
+        w_samples (int): the number of samples to draw from the document
+        
+    Outputs:
+        theta (np.array): the document-topic distribution
+    """
+    # Sample words from the document (helps for really short or really long documents)
+    sample = np.random.choice(doc_word_idx, size=w_samples, replace=True)
+    
+    # Initialize topic assignments and count vector for each sampled word
+    z_d = np.random.choice(phi.shape[0], size=len(sample))
+    counts = np.bincount(z_d, minlength=phi.shape[0]) + 1 / phi.shape[0] # smoothing parameter
+    theta = counts/counts.sum()
+    
+    it = 0
+    while it < max_iter:
+        for idx, sample_w_idx in enumerate(sample):
+            # Decrease count for the assigned word's topic-assignment
+            counts[z_d[idx]] -= 1     
+            # Compute the probability of that word being assigned to each topic
+            p_z_t = phi[:, sample_w_idx] * counts
+            p_z_t /= np.sum(p_z_t)         
+            # Sample a new topic
+            topic_sample = np.random.choice(phi.shape[0], p=p_z_t) 
+            # Update the topic assignment and the counts
+            z_d[idx] = topic_sample
+            counts[z_d[idx]] += 1
+    
+        # Check for convergence
+        new_theta = counts / counts.sum()
+        diff = np.abs(new_theta - theta)
+        if np.all(diff < tol):
+            break
+        # Update theta and continue iteration
+        theta = new_theta
+        it += 1
+    return theta

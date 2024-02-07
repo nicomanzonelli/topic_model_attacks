@@ -11,7 +11,7 @@ import multiprocessing as mp
 from typing import List, Callable, Tuple
 
 import numpy as np
-from scipy.stats import norm, multivariate_normal
+from scipy.stats import norm, multivariate_normal, entropy
 
 from data.utils import extract_features, encode_doc
 
@@ -51,7 +51,7 @@ class TopicLiRA:
             each_stat: bool = False,
             offline_only: bool = False,
             enable_mp: bool = True,
-            out_path: str = None) -> np.ndarray:
+            out_path: str = None) -> Tuple[List[float], List[float]]:
         """
         A function that fits a LiRA to a set of documents or observations.
         
@@ -86,7 +86,7 @@ class TopicLiRA:
                 Useful for running in jupyter for debugging or small tests.
 
             - out_path (str): A location to save artifacts or checkpoints from
-                the attack. File saved will be:
+                the attack. If none then it will not save files, files will be:
                 out_path/
                 └ in_stats.npy - array shaped (len(obs) x ? x len(stat_funcs))
                 |   contains the query statistics for each document for the shadow
@@ -286,9 +286,59 @@ class SimpleMIA:
     """
     def __init__():
         """
-        The base clas
+        Their simple MIA is initialized with the following:
+            - target_phi (ndarray): The target model's topic-word distribution
+                of shape (num topics x length of vocabulary)
+            - target_vocabulary (ndarray): The target model's vocabulary set
+                of shape (length of vocabulary,). Each entry corresponds to 
+                a word indexed in the vocabulary.
         """
-    
+
+    def fit(target_documents: List[str],
+            out_path: str = None) -> Tuple[List[float], List[float], List[float]]:
+        """
+        The simple attack proceads by estimating the target document's topic
+        distribution under the target model then calculates the maximum, 
+        standard deviation, and entropy of the topic distribution.
+
+        The results from the simple attack are directly thresholded to determine
+        attack performance. Therefore, the results (or scores) of the attack are
+        exact statistics.
+
+        Args:
+            - target_documents (list(str)): The document's to test for memberhsip.
+
+            - out_path (str): A location to save artifacts or checkpoints from
+                the attack. If none then it will not save files, files will be:
+                - max_ps.npy: The maximum posterior over each documents' topic dist.
+                - stds.npy: Standard deviation over each documents' topic dist.
+                - entropy.npy: Entropy over each documents' topic dist.
+
+        Returns:
+            - results (Tuple(list, list, list)): Tuple of scores in this order:
+                - results[0]: The maximum posterior over each documents' topic dist.
+                - results[1]: Standard deviation over each documents' topic dist.
+                - results[3]: Entropy over the documents' topic dist.
+        """
+        if out_path:
+            os.makedirs(out_path, exist_ok=True)
+
+        max_ps = []
+        stds = []
+        entropy = []
+        for doc in target_documents:
+            theta = get_topic_dist(encode_doc(doc))
+
+            max_ps.append(np.max(theta))
+            stds.append(np.std(theta))
+            entropy.append(entropy(theta))
+
+        if out_path:
+            # SAVE THESE
+            pass
+
+        return (max_ps, stds, entropy)
+
 # Helper Functions
 
 def map_calculate_stats(args, shadow_phis, target_phi, docs_in_shadow, stat_funcs):
