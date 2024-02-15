@@ -1,0 +1,1 @@
+{"N": 10, "data_path": "./data/pheme_clean.json", "train_func": "train_lda_sklearn", "train_kwargs": {"k": 5}}

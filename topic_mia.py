@@ -285,7 +285,7 @@ class SimpleMIA:
     estimation and defensive ability of latent dirichlet allocation model training 
     under rényi differential privacy" (2022).
     """
-    def __init__():
+    def __init__(self, target_phi, target_vocabulary):
         """
         Their simple MIA is initialized with the following:
             - target_phi (ndarray): The target model's topic-word distribution
@@ -294,9 +294,10 @@ class SimpleMIA:
                 of shape (length of vocabulary,). Each entry corresponds to 
                 a word indexed in the vocabulary.
         """
+        self.target_phi = target_phi
+        self.target_vocabulary = target_vocabulary
 
-    def fit(target_documents: List[str],
-            out_path: str = None) -> Tuple[List[float], List[float], List[float]]:
+    def fit(self, target_documents: List[str], out_path: str = None) -> Tuple:
         """
         The simple attack proceads by estimating the target document's topic
         distribution under the target model then calculates the maximum, 
@@ -311,8 +312,8 @@ class SimpleMIA:
 
             - out_path (str): A location to save artifacts or checkpoints from
                 the attack. If none then it will not save files, files will be:
-                - max_ps.npy: The maximum posterior over each documents' topic dist.
-                - stds.npy: Standard deviation over each documents' topic dist.
+                - maxs.npy: The maximum posterior over each documents' topic dist.
+                - std.npy: Standard deviation over each documents' topic dist.
                 - entropy.npy: Entropy over each documents' topic dist.
 
         Returns:
@@ -323,22 +324,25 @@ class SimpleMIA:
         """
         if out_path:
             os.makedirs(out_path, exist_ok=True)
+        
+        X_tar, _ = extract_features(target_documents, self.target_vocabulary)
 
-        max_ps = []
+        maxs = []
         stds = []
-        entropy = []
-        for doc in target_documents:
-            theta = get_topic_dist(encode_doc(doc))
+        ents = []
+        for i in range(X_tar.shape[0]):
+            theta = get_topic_dist(self.target_phi, encode_doc(X_tar[i]))
 
-            max_ps.append(np.max(theta))
+            maxs.append(np.max(theta))
             stds.append(np.std(theta))
-            entropy.append(entropy(theta))
+            ents.append(entropy(theta))
 
         if out_path:
-            # SAVE THESE
-            pass
-
-        return (max_ps, stds, entropy)
+            np.save(os.path.join(out_path, 'maxs.npy'), maxs)
+            np.save(os.path.join(out_path, 'std.npy'), stds)
+            np.save(os.path.join(out_path, 'entropy.npy'), ents)
+                     
+        return (maxs, stds, ents)
 
 # Helper Functions
 
