@@ -15,8 +15,9 @@ import functools
 import numpy as np
 
 # import custom modules
-from data_utils import load_data_json, split_data, extract_features
-from topic_mia import TopicLiRA
+from data.utils import load_data_json, split_data, extract_features
+from topic_mia import TopicLiRA, SimpleMIA
+from topic_models import fdptm
 
 def train_target_model(data_path, target_model_path, p, train_func, train_kwargs):
     """
@@ -166,6 +167,10 @@ def map_train_shadow_model(args, train_func, train_kwargs):
 def fit_lira(data_path, target_model_path, shadow_model_path, fit_kwargs):
     """
     A function that fits a LiRA using the TopicLiRA defined in topic_mia.
+
+    Args:
+        - fit_kwargs (dict): The key word arguments for TopicLiRA.fit(). These
+        must include 'out_path'.
     """
     # Load Data
     text_data = load_data_json(data_path)
@@ -194,29 +199,104 @@ def fit_lira(data_path, target_model_path, shadow_model_path, fit_kwargs):
     print(f"[i] Fit LiRA in {total_time/60:.2f} minutes")
     print(f"[i] Results saved to {fit_kwargs['out_path']}")
 
+
+def fdptm_target_model(data_path, target_model_path, p, dpsu_func, dpsu_kwargs,
+                       train_func, train_kwargs):
+    """
+    A function that trains and saves a fully differentially private target model 
+    and meta data associated with the target model.
+
+    The function does not return anything but it does save the following files
+    at `target_model_path`:
+    - docs_in_target.npy (ndarry[bool]): Array with boolean indicator for 
+        document at index is in target model (truth-vector).
+    - vocabulary.npy (ndarray[object]): Array where each entry corresponds to 
+        a word indexed in the vocabulary.
+    - phi.npy (ndarray[float64]) A topic-word distribution with shape 
+        (number of topics x len(vocabulary))
+    - target_params.json: parameters and other metadata for learning model.
+
+    Args:
+        - data_path (str): Path to the data saved as a json.
+        - target_model_path (str): Path to save results. If NONE, does not save.
+        - p (float): Percentage of the data to include in the target model.
+        - dpsu_func (function()): The vocabulary selection algorithm.
+            if None, then it skips the DP-vocabulary selection step.
+        - dpsu_kwargs (Dict): Key word arguments of vocabulary selection
+            algorithm. Can be None if dpsu_func is None.
+        - train_func (function()): A function that returns the topic-word dist.
+        - train_kwargs (Dict): The key word arguments for the train function.
+
+    Returns:
+        - docs_in_target (ndarray): The documents included in the target model.
+        - target_phi (ndarray): Topic word distribution for target model.
+        - vocabulary (ndarray):
+        - perplexity (float)
+    """
+    if target_model_path:
+        os.makedirs(target_model_path, exist_ok=True)
+
+    params = {'p': p, 
+              'data_path': data_path, 
+              'train_func': train_func.__name__,
+              'train_kwargs': train_kwargs}
+    
+    if dpsu_func:
+         params['vocab_selection_func'] = dpsu_func.__name__
+         params['vocab_selection_kwargs'] = dpsu_kwargs
+    
+    corpus = load_data_json(data_path)
+
+    start_time = time.time()
+
+    out = fdptm(corpus, dpsu_func, dpsu_kwargs, train_func, train_kwargs, p)
+    docs_in_target, vocab, target_phi  = out
+
+    total_time = time.time() - start_time
+    print(f"[i] Trained target model in {total_time/60:.2f} minutes")
+
+    np.save(os.path.join(target_model_path, 'docs_in_target'), docs_in_target)
+    np.save(os.path.join(target_model_path, 'target_vocabulary'), vocab)
+    np.save(os.path.join(target_model_path, 'target_phi'), target_phi)
+    with open(os.path.join(target_model_path, 'target_params.json'), 'w') as f:
+        json.dump(params, f)
+    print(f"[i] Target model files saved to {target_model_path}")
+
+def fit_simple_attack(data_path, target_model_path, out_path):
+    """
+    A function that fits the simple MIA from Huang et al using the SimpleMIA 
+    defined in topic_mia.
+
+    Args:
+        - fit_kwargs (dict): The key word arguments for TopicLiRA.fit(). These
+        must include 'out_path'.
+    """
+    # Load Data
+    text_data = load_data_json(data_path)
+
+    # Load Target
+    target_phi = np.load(os.path.join(target_model_path, 'target_phi.npy'))
+    vocab_path = os.path.join(target_model_path, 'target_vocabulary.npy')
+    target_vocab = np.load(vocab_path, allow_pickle=True)
+
+    # Init Attack
+    mia = SimpleMIA(target_phi, target_vocab)
+
+    # This automatically saves the results to the out_path in fit_kwargs dict
+    start_time = time.time()
+    mia.fit(text_data, out_path)
+    total_time = time.time() - start_time
+
+    print(f"[i] Fit LiRA in {total_time/60:.2f} minutes")
+    print(f"[i] Results saved to {out_path}")
+
 if __name__ == "__main__":
-    # This is some experimental code. The cli will run a simple experiment
-    from topic_models import train_lda_sklearn
-    from model_stats import max_dmm_logll
+    #running a test on a private model
+    from defense.fdptm_helpers import choose_vocab
+    from topic_models import train_dp_lda_gibbs
 
-    stat_funcs = [max_dmm_logll]
-    
-    train_target_model("./data/pheme_clean.json",
-                    f"./new_test/",
-                    .5,
-                    train_lda_sklearn,
-                    {"k": 5})
-    print()
-    train_shadow_models("./data/pheme_clean.json",
-                    f"./new_test/",
-                    f"./new_test/",
-                    64,
-                    train_lda_sklearn,
-                    {'k': 5})
-    print()
-    fit_kwargs = {'out_path': "./new_test/", 'statistic_functions': stat_funcs}
-    fit_lira("./data/pheme_clean.json", "./new_test/", "./new_test/", fit_kwargs)
+    dpsu_kwargs = {"alpha_cutoff": 3, "epsilon": 3, "delta": 10e-5}
+    lda_kwargs = {"k": 5, "epsilon": 3, "n_iters": 30}
 
-
-    
-
+    fdptm_target_model("./data/pheme_clean.json", "./test", .6, choose_vocab,
+                       dpsu_kwargs, train_dp_lda_gibbs, lda_kwargs)

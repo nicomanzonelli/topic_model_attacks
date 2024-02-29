@@ -11,9 +11,10 @@ import multiprocessing as mp
 from typing import List, Callable, Tuple
 
 import numpy as np
-from scipy.stats import norm, multivariate_normal
+from scipy.stats import norm, multivariate_normal, entropy
 
-from data_utils import extract_features, encode_doc
+from data.utils import extract_features, encode_doc
+from model_stats import get_topic_dist
 
 class TopicLiRA:
     """
@@ -31,10 +32,11 @@ class TopicLiRA:
             - offline_only (bool): Boolean indicator to run only the offline test.
 
         Other class attribute include:
-            - self.in_stats (ndarray):
-            - self.out_stats (ndarray):
-            - self.obs_stats (ndarray):
-            - self.scores (Tuple(list, list)):
+            - self.in_stats (ndarray): Query statistcs for each document on the '
+                    shadow models learned with said document.
+            - self.out_stats (ndarray): Same as in_stats, but for learned without!
+            - self.obs_stats (ndarray): Query statistcs calculated on the target model.
+            - self.scores (Tuple(list, list)): Offline and Online MIA scores.
         """
         self.target_phi = target_phi
         self.target_vocabulary = target_vocabulary
@@ -50,7 +52,7 @@ class TopicLiRA:
             each_stat: bool = False,
             offline_only: bool = False,
             enable_mp: bool = True,
-            out_path: str = None) -> np.ndarray:
+            out_path: str = None) -> Tuple[List[float], List[float]]:
         """
         A function that fits a LiRA to a set of documents or observations.
         
@@ -85,7 +87,7 @@ class TopicLiRA:
                 Useful for running in jupyter for debugging or small tests.
 
             - out_path (str): A location to save artifacts or checkpoints from
-                the attack. File saved will be:
+                the attack. If none then it will not save files, files will be:
                 out_path/
                 └ in_stats.npy - array shaped (len(obs) x ? x len(stat_funcs))
                 |   contains the query statistics for each document for the shadow
@@ -96,6 +98,11 @@ class TopicLiRA:
                 |   containing the query statistics for each document.
                 └ offline_scores.npy - array shaped (len(obs),) with offline MIA scores
                 └ online_scores.npy - array shaped (len(obs),) with online MIA scores
+
+        Returns:
+            - self.scores (Tuple(list, list)): A tuple of the MIA scores. The 
+                self.scores[0] is the list of offline scores, and self.scores[1]
+                is the list of online scores.
         """
         if out_path:
             os.makedirs(out_path, exist_ok=True)
@@ -131,10 +138,13 @@ class TopicLiRA:
                         shadow_phis: np.ndarray, 
                         docs_in_shadow: List[np.ndarray], 
                         stat_funcs: List,
-                        enable_mp: bool) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+                        enable_mp: bool) -> None:
         """
         Function that gets the statistics for each target document and each shadow
         model.
+
+        This method returns None, but sets the class attributes self.in_stats,
+        self.out_stats, and self.obs_stats.
         """
 
         map_kwargs = {'shadow_phis': shadow_phis, 'docs_in_shadow': docs_in_shadow,
@@ -156,7 +166,17 @@ class TopicLiRA:
 
     def _score_online(self, each_stat):
         """
-        
+        This method calculates the online MIA scores for all documents.
+
+        If the user specifies each stat, it calculates the scores for each 
+        statistic provided. If the user does not, it combines all provided stat.
+        functions using a multivariate norm.
+
+        Returns:
+            - scores (list): List of online MIA scores. If each stat then
+            this method returns list of length number of statistic functions + 1
+            where scores[0] is the mvnorm scores and scores[1:len(stat_functions)-1]
+            is the univariate normal scores for each function.
         """
         scores = self._online_mvnorm_score()
 
@@ -167,7 +187,10 @@ class TopicLiRA:
 
     def _online_mvnorm_score(self):
         """
-        
+        Class method that caluclates the mvnorm online MIA score for each document.
+
+        Returns:
+            - scores (list): List of online MIA scores.
         """
         scores = []
 
@@ -187,7 +210,11 @@ class TopicLiRA:
 
     def _online_score_each(self):
         """
+        Class method that calculates univariate norm online MIA score for each document.
 
+        Returns:
+            - scores (list(list)): List of online MIA scores for each stat in 
+                statatistc_functions.
         """
         scores = []
         for si in range(self.obs_stats.shape[2]):
@@ -210,7 +237,7 @@ class TopicLiRA:
 
     def _score_offline(self, each_stat):
         """
-        
+        Method that operates the same as _score_online, but for offline MIAs
         """
         scores = self._offline_mvnorm_score()
 
@@ -221,7 +248,7 @@ class TopicLiRA:
     
     def _offline_mvnorm_score(self):
         """
-        
+        Method that operates the same as _online_mvnorm_score but for offline
         """
         scores = []
 
@@ -236,7 +263,7 @@ class TopicLiRA:
 
     def _offline_score_each(self):
         """
-        
+        Method the same as _online_score_each but for offline.
         """
         scores = []
         for si in range(self.obs_stats.shape[2]):
@@ -252,6 +279,71 @@ class TopicLiRA:
 
         return scores
     
+class SimpleMIA:
+    """
+    The base class that executes the attacks from Huang et al. "Improving parameter 
+    estimation and defensive ability of latent dirichlet allocation model training 
+    under rényi differential privacy" (2022).
+    """
+    def __init__(self, target_phi, target_vocabulary):
+        """
+        Their simple MIA is initialized with the following:
+            - target_phi (ndarray): The target model's topic-word distribution
+                of shape (num topics x length of vocabulary)
+            - target_vocabulary (ndarray): The target model's vocabulary set
+                of shape (length of vocabulary,). Each entry corresponds to 
+                a word indexed in the vocabulary.
+        """
+        self.target_phi = target_phi
+        self.target_vocabulary = target_vocabulary
+
+    def fit(self, target_documents: List[str], out_path: str = None) -> Tuple:
+        """
+        The simple attack proceads by estimating the target document's topic
+        distribution under the target model then calculates the maximum, 
+        standard deviation, and entropy of the topic distribution.
+
+        The results from the simple attack are directly thresholded to determine
+        attack performance. Therefore, the results (or scores) of the attack are
+        exact statistics.
+
+        Args:
+            - target_documents (list(str)): The document's to test for memberhsip.
+
+            - out_path (str): A location to save artifacts or checkpoints from
+                the attack. If none then it will not save files, files will be:
+                - maxs.npy: The maximum posterior over each documents' topic dist.
+                - std.npy: Standard deviation over each documents' topic dist.
+                - entropy.npy: Entropy over each documents' topic dist.
+
+        Returns:
+            - results (Tuple(list, list, list)): Tuple of scores in this order:
+                - results[0]: The maximum posterior over each documents' topic dist.
+                - results[1]: Standard deviation over each documents' topic dist.
+                - results[3]: Entropy over the documents' topic dist.
+        """
+        if out_path:
+            os.makedirs(out_path, exist_ok=True)
+        
+        X_tar, _ = extract_features(target_documents, self.target_vocabulary)
+
+        maxs = []
+        stds = []
+        ents = []
+        for i in range(X_tar.shape[0]):
+            theta = get_topic_dist(self.target_phi, encode_doc(X_tar[i]))
+
+            maxs.append(np.max(theta))
+            stds.append(np.std(theta))
+            ents.append(entropy(theta))
+
+        if out_path:
+            np.save(os.path.join(out_path, 'maxs.npy'), maxs)
+            np.save(os.path.join(out_path, 'std.npy'), stds)
+            np.save(os.path.join(out_path, 'entropy.npy'), ents)
+                     
+        return (maxs, stds, ents)
+
 # Helper Functions
 
 def map_calculate_stats(args, shadow_phis, target_phi, docs_in_shadow, stat_funcs):
