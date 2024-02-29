@@ -93,12 +93,15 @@ def fdptm(text, dpsu_func, dpsu_kwargs, train_func, train_kwargs, p = 1):
     Args:
         - text (list[str]): List of str documents.
         - dpsu_func (function()): The vocabulary selection algorithm.
-            if None, then it skips the DP-vocabulary selection step.
-            (i.e. choose_vocab from defense.fdptm_helpers is provided choice)
-        - dpsu_kwargs (Dict): Key word arguments of vocabulary selection algorithm
+            if None, then it skips the DP-vocabulary selection step. First arg
+            must be the text data List[str]. (i.e. choose_vocab from 
+            defense.fdptm_helpers is provided)
+        - dpsu_kwargs (Dict): Key word arguments of vocabulary selection algorithm.
+            *not including the data!
         - train_func (function()): A function that returns the topic-word dist.
             for all documents in selected for the target model. (see above)
         - train_kwargs (Dict): The key word arguments for the train function.
+            * also not including the data!
         - p (float): Percentage of the data to include in the model (default 1)
 
     Returns:
@@ -121,4 +124,13 @@ def fdptm(text, dpsu_func, dpsu_kwargs, train_func, train_kwargs, p = 1):
 
 if __name__ == "__main__":
     # Here is a simple simulation showing the FDPTM in action!
-    print("hello")
+    from data.utils import load_data_json
+    from defense.fdptm_helpers import choose_vocab
+
+    text = load_data_json("./data/pheme_clean.json")
+    dpsu_kwargs = {"alpha_cutoff": 3, "epsilon": 3, "delta": 10e-5}
+    lda_kwargs = {"k": 5, "epsilon": 3, "n_iters": 30}
+    ret = fdptm(text, choose_vocab, dpsu_kwargs, train_dp_lda_gibbs, lda_kwargs)
+    docs_in_train, vocab, target_phi = ret
+
+    

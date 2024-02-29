@@ -289,3 +289,14 @@ def fit_simple_attack(data_path, target_model_path, out_path):
 
     print(f"[i] Fit LiRA in {total_time/60:.2f} minutes")
     print(f"[i] Results saved to {out_path}")
+
+if __name__ == "__main__":
+    #running a test on a private model
+    from defense.fdptm_helpers import choose_vocab
+    from topic_models import train_dp_lda_gibbs
+
+    dpsu_kwargs = {"alpha_cutoff": 3, "epsilon": 3, "delta": 10e-5}
+    lda_kwargs = {"k": 5, "epsilon": 3, "n_iters": 30}
+
+    fdptm_target_model("./data/pheme_clean.json", "./test", .6, choose_vocab,
+                       dpsu_kwargs, train_dp_lda_gibbs, lda_kwargs)
