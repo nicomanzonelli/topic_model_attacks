@@ -21,11 +21,10 @@ This repository is organized as follows:
   - init.py
   - dpsu_gw.py - Code from [Carvalho et al (2022)](https://github.com/ricardocarvalhods/diff-private-set-union) for DP Set Union (DPSU).
   - lda.py - Code for implementing DP LDA.
-  - fdptm_helpers.py - Code that provides helper functions for Fully Differentially Private Topic Modeling.
+  - fdptm_helpers.py - Provides helper functions for Fully Differentially Private Topic Modeling.
 - cli.py - Provides simple command line interface that allows for reproducible results.
 - simulation_utils.py - Provides functions to help run attack simulations.
 - topic_mia.py - Provides class for LiRA from [Carlini et al (2021)](https://arxiv.org/abs/2112.03570) adapted to attack topic models.
-- topic_models.py - Provides topic
-- requirements.txt - Text file that specifies required python packages for running our code.
+- topic_models.py - Provides general topic modeling functions.
 
 **Note:** This repository is intended for educational and research purposes only. The code and resources should be used responsibly and ethically, with respect for privacy considerations.
