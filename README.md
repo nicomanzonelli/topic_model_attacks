@@ -1,6 +1,6 @@
 # Membership Inference Attacks and Privacy in Topic Modeling
 
-This repository contains the code and resources for "Membership Inference Attacks and Privacy in Topic Modeling." We investigate the effectiveness of membership inference attacks on topic models, and proposes differentially private (DP) vocabulary selection as a pre-processing step for topic modeling. The code in this repository allows reproducible results.
+This repository contains the code and resources for ["Membership Inference Attacks and Privacy in Topic Modeling"](https://arxiv.org/abs/2403.04451). We investigate the effectiveness of membership inference attacks on topic models, and proposes differentially private (DP) vocabulary selection as a pre-processing step for topic modeling. The code in this repository allows reproducible results.
 
 ### Running Attack Simulations
 
